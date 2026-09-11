@@ -1907,7 +1907,7 @@
             try {
                 // محاولة تحميل من Firebase أولاً
                 if (database && window.fyoDatabaseRef) {
-                    const snapshot = await get(window.fyoDatabaseRef);
+                    const snapshot = await window.fyoGet(window.fyoDatabaseRef);
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         appData.users = data.users || appData.users;
@@ -2743,6 +2743,7 @@
             const app = initializeApp(firebaseConfig);
             const db = getDatabase(app);
             database = db;
+            window.fyoGet = get;
             
             // جعل قاعدة البيانات متاحة عالمياً
             window.fyoDatabase = db;
