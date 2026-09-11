@@ -1877,7 +1877,7 @@
                 
                 const dbRef = window.fyoDatabaseRef;
                 if (dbRef) {
-                    await dbRef.set({
+                    await window.fyoSet(dbRef, {
                         users: appData.users,
                         files: appData.files,
                         tests: appData.tests,
@@ -2744,6 +2744,7 @@
             const db = getDatabase(app);
             database = db;
             window.fyoGet = get;
+            window.fyoSet = set;
             
             // جعل قاعدة البيانات متاحة عالمياً
             window.fyoDatabase = db;
