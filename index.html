@@ -2728,19 +2728,21 @@
 
         // مفتاح الربط الخاص بك
         const firebaseConfig = {
-            apiKey: "AIzaSyDIN3fateBnFrrxZL-nOgjVWX2PVaq7N50",
-            authDomain: "fyo-sa.firebaseapp.com",
-            projectId: "fyo-sa",
-            storageBucket: "fyo-sa.firebasestorage.app",
-            messagingSenderId: "682180920008",
-            appId: "1:682180920008:web:c4fd6134802c1202aa5bfd",
-            databaseURL: "https://fyo-sa-default-rtdb.firebaseio.com/"
-        };
+  apiKey: "AIzaSyDExjPk7gV4RIYgNQxamLa3ov4Iy8k8iWo",
+  authDomain: "fyo-platform-2026.firebaseapp.com",
+  databaseURL: "https://fyo-platform-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "fyo-platform-2026",
+  storageBucket: "fyo-platform-2026.firebasestorage.app",
+  messagingSenderId: "144993947895",
+  appId: "1:144993947895:web:a2eed04d22846c0eea43f2",
+  measurementId: "G-4B2XJWWLN8"
+};
 
         // تشغيل الاتصال
         try {
             const app = initializeApp(firebaseConfig);
             const db = getDatabase(app);
+            database = db;
             
             // جعل قاعدة البيانات متاحة عالمياً
             window.fyoDatabase = db;
