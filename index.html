@@ -2486,6 +2486,14 @@
                 const title = document.getElementById('fileTitle').value;
                 const type = document.getElementById('fileType').value;
                 const description = document.getElementById('fileDescription').value;
+                const uploadedFile = document.getElementById('fileUpload').files[0];
+
+if (!uploadedFile) {
+    showNotification('warning', 'لا يوجد ملف', 'اختر ملفاً أولاً');
+    return;
+}
+
+                
                 
                 // الحصول على المستخدمين المحددين
                 const selectedUsers = [];
@@ -2499,6 +2507,13 @@
                 }
                 
                 const today = new Date().toISOString().split('T')[0];
+                const filePath = `files/${Date.now()}_${uploadedFile.name}`;
+const fileStorageRef = window.fyoStorageRef(window.fyoStorage, filePath);
+
+await window.fyoUploadBytes(fileStorageRef, uploadedFile);
+
+const fileURL = await window.fyoGetDownloadURL(fileStorageRef);
+                
                 const newFile = {
                     id: appData.files.length + 1,
                     title: title,
@@ -2506,6 +2521,8 @@
                     description: description,
                     uploadDate: today,
                     users: selectedUsers
+                    url: fileURL,
+name: uploadedFile.name,
                 };
                 
                 appData.files.push(newFile);
@@ -2725,6 +2742,13 @@
             remove,
             onValue 
         } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
+        
+        import {
+    getStorage,
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.11.1/firebase-storage.js";
 
         // مفتاح الربط الخاص بك
         const firebaseConfig = {
@@ -2742,6 +2766,11 @@
         try {
             const app = initializeApp(firebaseConfig);
             const db = getDatabase(app);
+            const storage = getStorage(app);
+window.fyoStorage = storage;
+window.fyoStorageRef = storageRef;
+window.fyoUploadBytes = uploadBytes;
+window.fyoGetDownloadURL = getDownloadURL;
             database = db;
             window.fyoGet = get;
             window.fyoSet = set;
