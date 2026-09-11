@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1915,6 +1916,9 @@
                         appData.tests = data.tests || appData.tests;
                         appData.maintenanceMode = data.maintenanceMode || false;
                         appData.maintenanceEndTime = data.maintenanceEndTime || null;
+                        appData.users = Array.isArray(appData.users) ? appData.users : Object.values(appData.users || {});
+                        appData.files = (Array.isArray(appData.files) ? appData.files : Object.values(appData.files || {})).filter(Boolean).map(f => ({...f, users: Array.isArray(f.users) ? f.users : []}));
+                        appData.tests = (Array.isArray(appData.tests) ? appData.tests : Object.values(appData.tests || {})).filter(Boolean).map(t => ({...t, users: Array.isArray(t.users) ? t.users : []}));
                         console.log("✅ تم تحميل البيانات من Firebase");
                         return true;
                     }
@@ -2115,7 +2119,7 @@
                     <td><strong>${file.title}</strong><br><small style="color: var(--text-light);">${file.description}</small></td>
                     <td><span class="badge badge-info">${file.type}</span></td>
                     <td>${file.uploadDate}</td>
-                    <td>${test.users ? test.users.length : 0} طالب</td>
+                    <td>${Array.isArray(file.users) ? file.users.length : 0} طالب</td>
                     <td>
                         <button class="action-btn edit-file-btn" data-id="${file.id}"><i class="fas fa-edit"></i> تعديل</button>
                         <button class="action-btn btn-danger delete-file-btn" data-id="${file.id}"><i class="fas fa-trash-alt"></i> حذف</button>
@@ -2139,7 +2143,7 @@
                     <td>${test.questions} سؤال</td>
                     <td>${test.duration} دقيقة</td>
                     <td>${test.creationDate}</td>
-                    <td>${test.users.length} طالب</td>
+                    <td>${Array.isArray(test.users) ? test.users.length : 0} طالب</td>
                     <td>
                         <button class="action-btn edit-test-btn" data-id="${test.id}"><i class="fas fa-edit"></i> تعديل</button>
                         <button class="action-btn btn-danger delete-test-btn" data-id="${test.id}"><i class="fas fa-trash-alt"></i> حذف</button>
@@ -2165,7 +2169,7 @@
                 const status = remainingDays > 0 ? 'نشط' : 'منتهي';
                 const statusClass = status === 'نشط' ? 'badge-success' : 'badge-danger';
                 
-                const availableFiles = appData.files.filter(f => f.users.includes(user.username)).length;
+                const availableFiles = appData.files.filter(f => Array.isArray(f.users) && f.users.includes(user.username)).length;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -2227,8 +2231,8 @@
             document.getElementById('studentDaysLeft').textContent = remainingDays > 0 ? remainingDays : 0;
             document.getElementById('studentStreak').textContent = student.streak;
             
-            const availableFiles = appData.files.filter(f => f.users.includes(student.username)).length;
-            const availableTests = appData.tests.filter(t => t.users.includes(student.username)).length;
+            const availableFiles = appData.files.filter(f => Array.isArray(f.users) && f.users.includes(student.username)).length;
+            const availableTests = appData.tests.filter(t => Array.isArray(t.users) && t.users.includes(student.username)).length;
             
             document.getElementById('studentFilesCount').textContent = availableFiles;
             document.getElementById('studentTestsCount').textContent = availableTests;
@@ -2248,7 +2252,7 @@
             studentFilesTableBody.innerHTML = '';
             
             appData.files.forEach(file => {
-                if (file.users.includes(student.username)) {
+                if (Array.isArray(file.users) && file.users.includes(student.username)) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td><strong>${file.title}</strong></td>
@@ -2268,7 +2272,7 @@
             studentTestsTableBody.innerHTML = '';
             
             appData.tests.forEach(test => {
-                if (test.users.includes(student.username)) {
+                if (tesArray.isArray(t.users) && t.users.includes(student.username)) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td><strong>${test.title}</strong></td>
@@ -2524,7 +2528,7 @@ const fileData = await new Promise((resolve, reject) => {
 });
               
                 const newFile = {
-    id: appData.files.length + 1,
+    id: appData.files.reduce((max, f) => Math.max(max, Number(f.id) || 0), 0) + 1,
     title: title,
     type: type,
     description: description,
@@ -2538,7 +2542,12 @@ const fileData = await new Promise((resolve, reject) => {
                 appData.files.push(newFile);
                 
                 // حفظ في قاعدة البيانات
-                await saveToDatabase();
+                const fileSaved = await saveToDatabase();
+                if (!fileSaved) {
+                    appData.files = appData.files.filter(f => f.id !== newFile.id);
+                    showNotification('danger', 'فشل الرفع', 'تعذر حفظ الملف في Firebase. تحقق من الاتصال وحجم الملف.');
+                    return;
+                }
                 
                 showNotification('success', 'تم الرفع', `تم رفع الملف "${title}" بنجاح`);
                 updateFilesTable();
@@ -2620,7 +2629,7 @@ const fileData = await new Promise((resolve, reject) => {
                 
                 const today = new Date().toISOString().split('T')[0];
                 const newTest = {
-                    id: appData.tests.length + 1,
+                    id: appData.tests.reduce((max, t) => Math.max(max, Number(t.id) || 0), 0) + 1,
                     title: testTitle,
                     description: testDescription,
                     duration: testDuration,
@@ -2717,11 +2726,11 @@ if (e.target.closest('.download-file-btn')) {
                         
                         // حذف الطالب من قوائم الملفات والاختبارات
                         appData.files.forEach(file => {
-                            file.users = file.users.filter(u => u !== username);
+                            file.users = Array.isArray(file.users) ? file.users.filter(u => u !== username) : [];
                         });
                         
                         appData.tests.forEach(test => {
-                            test.users = test.users.filter(u => u !== username);
+                            test.users = Array.isArray(test.users) ? test.users.filter(u => u !== username) : [];
                         });
                         
                         // حفظ في قاعدة البيانات
@@ -2838,6 +2847,9 @@ if (e.target.closest('.download-file-btn')) {
                             appData.tests = data.tests || appData.tests;
                             appData.maintenanceMode = data.maintenanceMode || false;
                             appData.maintenanceEndTime = data.maintenanceEndTime || null;
+                        appData.users = Array.isArray(appData.users) ? appData.users : Object.values(appData.users || {});
+                        appData.files = (Array.isArray(appData.files) ? appData.files : Object.values(appData.files || {})).filter(Boolean).map(f => ({...f, users: Array.isArray(f.users) ? f.users : []}));
+                        appData.tests = (Array.isArray(appData.tests) ? appData.tests : Object.values(appData.tests || {})).filter(Boolean).map(t => ({...t, users: Array.isArray(t.users) ? t.users : []}));
                             
                             // تحديث الواجهة
                             if (typeof updateUsersTable === 'function') updateUsersTable();
