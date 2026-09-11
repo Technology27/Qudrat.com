@@ -1907,7 +1907,7 @@
             try {
                 // محاولة تحميل من Firebase أولاً
                 if (database && window.fyoDatabaseRef) {
-                    const snapshot = await window.fyoDatabaseRef.get();
+                    const snapshot = await get(window.fyoDatabaseRef);
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         appData.users = data.users || appData.users;
