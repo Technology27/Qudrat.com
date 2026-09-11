@@ -2507,23 +2507,33 @@ if (!uploadedFile) {
                 }
                 
                 const today = new Date().toISOString().split('T')[0];
-                const filePath = `files/${Date.now()}_${uploadedFile.name}`;
-const fileStorageRef = window.fyoStorageRef(window.fyoStorage, filePath);
+                // منع الملفات الكبيرة لأننا نحفظها داخل Realtime Database
+if (uploadedFile.size > 2 * 1024 * 1024) {
+    showNotification('warning', 'الملف كبير', 'حالياً الحد الأقصى للملف 2 ميجابايت');
+    return;
+}
 
-await window.fyoUploadBytes(fileStorageRef, uploadedFile);
+// تحويل الملف إلى Base64
+const fileData = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-const fileURL = await window.fyoGetDownloadURL(fileStorageRef);
-                
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+
+    reader.readAsDataURL(uploadedFile);
+});
+              
                 const newFile = {
-                    id: appData.files.length + 1,
-                    title: title,
-                    type: type,
-                    description: description,
-                    uploadDate: today,
-                    users: selectedUsers
-                    url: fileURL,
-name: uploadedFile.name,
-                };
+    id: appData.files.length + 1,
+    title: title,
+    type: type,
+    description: description,
+    uploadDate: today,
+    users: selectedUsers,
+    name: uploadedFile.name,
+    mimeType: uploadedFile.type,
+    fileData: fileData
+};
                 
                 appData.files.push(newFile);
                 
@@ -2638,6 +2648,43 @@ name: uploadedFile.name,
             
             // تفويض الأحداث للجداول
             document.addEventListener('click', async function(e) {
+                // معاينة ملف الطالب
+if (e.target.closest('.view-file-btn')) {
+    const viewBtn = e.target.closest('.view-file-btn');
+    const fileId = Number(viewBtn.getAttribute('data-id'));
+    const file = appData.files.find(f => f.id === fileId);
+
+    if (!file || !file.fileData) {
+        showNotification('warning', 'الملف غير متوفر', 'لا توجد بيانات للملف');
+        return;
+    }
+
+    const newWindow = window.open();
+
+    if (newWindow) {
+        newWindow.location.href = file.fileData;
+    } else {
+        showNotification('warning', 'تعذر فتح الملف', 'اسمح بالنوافذ المنبثقة للمعاينة');
+    }
+}
+                // تنزيل ملف الطالب
+if (e.target.closest('.download-file-btn')) {
+    const downloadBtn = e.target.closest('.download-file-btn');
+    const fileId = Number(downloadBtn.getAttribute('data-id'));
+    const file = appData.files.find(f => f.id === fileId);
+
+    if (!file || !file.fileData) {
+        showNotification('warning', 'الملف غير متوفر', 'لا توجد بيانات للملف');
+        return;
+    }
+
+    const link = document.createElement('a');
+    link.href = file.fileData;
+    link.download = file.name || file.title || 'file';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
                 // تجديد اشتراك طالب
                 if (e.target.closest('.renew-btn')) {
                     const username = e.target.closest('.renew-btn').getAttribute('data-username');
@@ -2742,14 +2789,7 @@ name: uploadedFile.name,
             remove,
             onValue 
         } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
-        
-        import {
-    getStorage,
-    ref as storageRef,
-    uploadBytes,
-    getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.11.1/firebase-storage.js";
-
+       
         // مفتاح الربط الخاص بك
         const firebaseConfig = {
   apiKey: "AIzaSyDExjPk7gV4RIYgNQxamLa3ov4Iy8k8iWo",
@@ -2766,11 +2806,7 @@ name: uploadedFile.name,
         try {
             const app = initializeApp(firebaseConfig);
             const db = getDatabase(app);
-            const storage = getStorage(app);
-window.fyoStorage = storage;
-window.fyoStorageRef = storageRef;
-window.fyoUploadBytes = uploadBytes;
-window.fyoGetDownloadURL = getDownloadURL;
+          
             database = db;
             window.fyoGet = get;
             window.fyoSet = set;
